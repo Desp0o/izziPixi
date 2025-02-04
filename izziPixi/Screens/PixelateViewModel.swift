@@ -77,10 +77,25 @@ final class PixelateViewModel: ObservableObject {
   }
   
   func saveImageToPhotos(_ image: UIImage) {
-    PHPhotoLibrary.requestAuthorization { status in
-      guard status == .authorized else { return }
+    isLoading = true
+    
+    Task {
+      let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+      guard status == .authorized else {
+        await MainActor.run {
+          self.isLoading = false
+        }
+        return
+      }
       
-      UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
+      await withCheckedContinuation { continuation in
+        UIImageWriteToSavedPhotosAlbum(image, nil, nil, nil)
+        continuation.resume()
+      }
+      
+      await MainActor.run {
+        self.isLoading = false
+      }
     }
   }
   
