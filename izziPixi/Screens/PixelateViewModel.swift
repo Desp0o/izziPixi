@@ -23,6 +23,20 @@ final class PixelateViewModel: ObservableObject {
     }
   }
   
+  func fixOrientation(_ image: UIImage) -> UIImage {
+    if image.imageOrientation == .up {
+      return image
+    }
+    
+    UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
+    image.draw(in: CGRect(origin: .zero, size: image.size))
+    
+    let fixedImage = UIGraphicsGetImageFromCurrentImageContext()
+    UIGraphicsEndImageContext()
+    
+    return fixedImage ?? image
+  }
+  
   func uploadImageFromAlbum(from selection: PhotosPickerItem?) {
     guard let selection else { return }
     isLoading = true
@@ -30,7 +44,7 @@ final class PixelateViewModel: ObservableObject {
     Task { [weak self] in
       if let data = try await selection.loadTransferable(type: Data.self) {
         if let uiImage = UIImage(data: data) {
-          self?.choosenImage = uiImage
+          self?.choosenImage = self?.fixOrientation(uiImage)
           self?.isButtonsDisabled = false
           self?.isLoading = false
         }
