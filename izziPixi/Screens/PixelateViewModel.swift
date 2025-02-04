@@ -9,7 +9,8 @@ import Combine
 import UIKit
 import CoreImage
 import CoreImage.CIFilterBuiltins
-import _PhotosUI_SwiftUI
+import PhotosUI
+import SwiftUI
 
 @MainActor
 final class PixelateViewModel: ObservableObject {
@@ -17,7 +18,7 @@ final class PixelateViewModel: ObservableObject {
   @Published var isButtonsDisabled = true
   @Published var pixelSize: Float = 12
   @Published var choosenImage: UIImage? = nil
-  @Published var pickedImage:PhotosPickerItem? = nil {
+  @Published var pickedImage: PhotosPickerItem? = nil {
     didSet {
       uploadImageFromAlbum(from: pickedImage)
     }
@@ -53,18 +54,26 @@ final class PixelateViewModel: ObservableObject {
   }
   
   func applyPixelation(scale: Float) -> UIImage? {
-    guard let image = choosenImage else { return nil}
-    let context = CIContext()
-    let filter = CIFilter.pixellate()
-    filter.inputImage = CIImage(image: image)
-    filter.scale = scale
+    guard let image = choosenImage else { return nil }
+    guard let ciImage = CIImage(image: image) else { return nil }
     
-    guard let outputImage = filter.outputImage,
-          let cgImage = context.createCGImage(outputImage, from: outputImage.extent) else {
-      return nil
-    }
+    let clampFilter = CIFilter.affineClamp()
+    clampFilter.inputImage = ciImage
     
-    return UIImage(cgImage: cgImage)
+    guard let clampedImage = clampFilter.outputImage else { return nil }
+    
+    let pixelFilter = CIFilter.pixellate()
+    pixelFilter.inputImage = clampedImage
+    pixelFilter.scale = scale
+    
+    guard let outputImage = pixelFilter.outputImage else { return nil }
+    
+    let context = CIContext(options: [.useSoftwareRenderer: false])
+    let rect = ciImage.extent
+    
+    guard let cgImage = context.createCGImage(outputImage, from: rect) else { return nil }
+    
+    return UIImage(cgImage: cgImage, scale: image.scale, orientation: image.imageOrientation)
   }
   
   func saveImageToPhotos(_ image: UIImage) {
