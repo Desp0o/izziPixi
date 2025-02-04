@@ -11,7 +11,7 @@ import SwiftUI
 struct izziPixiApp: App {
     var body: some Scene {
         WindowGroup {
-          ContentView(image: UIImage(named: "hablo") ?? UIImage(), pixelScale: 20)
+          ContentView()
         }
     }
 }
