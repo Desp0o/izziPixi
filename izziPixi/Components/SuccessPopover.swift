@@ -17,7 +17,7 @@ struct SuccessPopover: View {
         .foregroundStyle(.green)
         .scaleEffect(2)
       
-      Text("Image Saved To albums")
+      Text("Saved to Photo Library")
     }
     .padding(20)
     .background(Color.customBg.opacity(0.5))
