@@ -9,7 +9,7 @@ import SwiftUI
 import _PhotosUI_SwiftUI
 
 struct PixelateView: View {
-  @StateObject var vm = PixelateViewModel()
+  @StateObject private var vm = PixelateViewModel()
   
   var body: some View {
     VStack {
@@ -96,15 +96,18 @@ struct PixelateView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     )
     .overlay {
-      if vm.isLoading {
-        VStack {
+      ZStack {
+        if vm.isLoading {
           ProgressView()
             .scaleEffect(2)
             .tint(.blue)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.black.opacity(0.6))
+        
+        if vm.isSaved {
+          SuccessPopover(vm: vm)
+        }
       }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
   }
 }

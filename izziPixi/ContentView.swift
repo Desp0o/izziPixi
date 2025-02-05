@@ -31,17 +31,16 @@ struct ContentView: View {
           ZStack {
             if currentIdenx == index {
               RoundedRectangle(cornerRadius: 12)
-                .fill(.blue.opacity(0.6))
+                .fill(.blue)
                 .matchedGeometryEffect(id: "tab", in: namespace)
             }
             
             Button {
-              withAnimation(.spring) {
-                currentIdenx = index
-              }
+              currentIdenx = index
             } label: {
               Text(tab)
-                .foregroundStyle(.white)
+                .foregroundStyle(currentIdenx == index ? .white : .customGray)
+                .fontWeight(.semibold)
                 .frame(maxWidth: .infinity)
             }
           }
@@ -49,10 +48,11 @@ struct ContentView: View {
       }
       .frame(height: 40)
       .frame(maxWidth: .infinity)
-      .background(Color.customBg.opacity(0.5))
+      .background(Color.customBg)
       .background(.ultraThinMaterial)
       .clipShape(RoundedRectangle(cornerRadius: 12))
       .padding(.horizontal, 40)
+      .animation(.spring, value: currentIdenx)
     }
     .background(
       Color.customBg.ignoresSafeArea()

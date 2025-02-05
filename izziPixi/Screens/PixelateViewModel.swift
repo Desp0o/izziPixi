@@ -14,13 +14,64 @@ import SwiftUI
 
 @MainActor
 final class PixelateViewModel: ObservableObject {
+  private let fileManager = FileManager.default
+  private var directory: URL? = nil
+  
   @Published var isLoading = false
+  @Published var isSaved = false
   @Published var isButtonsDisabled = true
   @Published var pixelSize: Float = 12
   @Published var choosenImage: UIImage? = nil
+  @Published var images: [UIImage] = []
   @Published var pickedImage: PhotosPickerItem? = nil {
     didSet {
       uploadImageFromAlbum(from: pickedImage)
+    }
+  }
+  
+  var screenWidth: CGFloat {
+    UIApplication.shared.connectedScenes
+      .compactMap { $0 as? UIWindowScene }
+      .first?.screen.bounds.width ?? 0
+  }
+  var screenHeight: CGFloat {
+    UIApplication.shared.connectedScenes
+      .compactMap { $0 as? UIWindowScene }
+      .first?.screen.bounds.height ?? 0
+  }
+  
+  init() {
+    setupFileManager()
+    loadImages()
+  }
+  
+  func setupFileManager() {
+    guard let url = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
+      return
+    }
+    
+    directory = url.appendingPathComponent("SavedImages")
+    guard let dir = directory else { return }
+    
+    if !fileManager.fileExists(atPath: dir.path) {
+      do {
+        try fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
+      } catch {
+        print("error.localizedDescription")
+      }
+    }
+  }
+  
+  func loadImages() {
+    guard let dir = directory else { return }
+    guard let files = try? fileManager.contentsOfDirectory(atPath: dir.path) else { return }
+    
+    images = files.compactMap { fileName in
+      let filePath = dir.appendingPathComponent(fileName).path
+      if let data = try? Data(contentsOf: URL(fileURLWithPath: filePath)) {
+        return UIImage(data: data)
+      }
+      return nil
     }
   }
   
@@ -76,7 +127,25 @@ final class PixelateViewModel: ObservableObject {
     return UIImage(cgImage: cgImage, scale: image.scale, orientation: image.imageOrientation)
   }
   
-  func saveImageToPhotos(_ image: UIImage) {
+  func saveImagesToHistory() {
+    guard let dir = directory else { return }
+    for (index, image) in images.prefix(20).enumerated() {
+      let imagePath = dir.appendingPathComponent("image_\(index).jpg")
+      if let data = image.jpegData(compressionQuality: 1) {
+        try? data.write(to: imagePath)
+      }
+    }
+  }
+  
+  func addImage(_ image: UIImage) {
+    if images.count >= 20 {
+      images.removeLast()
+    }
+    images.insert(image, at: 0)
+    saveImagesToHistory()
+  }
+  
+  func saveImageToPhotos(_ image: UIImage, isSavingFromHistpry: Bool = false) {
     isLoading = true
     
     Task {
@@ -95,6 +164,11 @@ final class PixelateViewModel: ObservableObject {
       
       await MainActor.run {
         self.isLoading = false
+        self.isSaved = true
+        
+        if !isSavingFromHistpry {
+          addImage(image)
+        }
       }
     }
   }
@@ -104,5 +178,16 @@ final class PixelateViewModel: ObservableObject {
     pickedImage = nil
     choosenImage = nil
     pixelSize = 12
+  }
+  
+  func clearHistory() {
+    guard let dir = directory else { return }
+    if let files = try? fileManager.contentsOfDirectory(atPath: dir.path) {
+      for file in files {
+        let filePath = dir.appendingPathComponent(file).path
+        try? fileManager.removeItem(atPath: filePath)
+      }
+    }
+    images.removeAll()
   }
 }
