@@ -80,7 +80,13 @@ final class PixelateViewModel: ObservableObject {
     guard let dir = directory else { return }
     guard let files = try? fileManager.contentsOfDirectory(atPath: dir.path) else { return }
     
-    images = files.compactMap { fileName in
+    let sortedFiles = files.sorted { file1, file2 in
+      let index1 = Int(file1.replacingOccurrences(of: "image_", with: "").replacingOccurrences(of: ".jpg", with: "")) ?? 0
+      let index2 = Int(file2.replacingOccurrences(of: "image_", with: "").replacingOccurrences(of: ".jpg", with: "")) ?? 0
+      return index1 < index2
+    }
+    
+    images = sortedFiles.compactMap { fileName in
       let filePath = dir.appendingPathComponent(fileName).path
       if let data = try? Data(contentsOf: URL(fileURLWithPath: filePath)) {
         return UIImage(data: data)
