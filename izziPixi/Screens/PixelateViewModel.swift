@@ -23,6 +23,7 @@ final class PixelateViewModel: ObservableObject {
   @Published var pixelSize: Float = 12
   @Published var choosenImage: UIImage? = nil
   @Published var images: [UIImage] = []
+  @Published var showPhotoAccessAlert = false
   @Published var pickedImage: PhotosPickerItem? = nil {
     didSet {
       uploadImageFromAlbum(from: pickedImage)
@@ -41,8 +42,21 @@ final class PixelateViewModel: ObservableObject {
   }
   
   init() {
+    Task {
+      await checkPhotoLibraryAccess()
+    }
     setupFileManager()
     loadImages()
+  }
+  
+  private func checkPhotoLibraryAccess() async {
+    let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+    await MainActor.run {
+      if status == .denied || status == .restricted {
+        showPhotoAccessAlert = true
+        isButtonsDisabled = true
+      }
+    }
   }
   
   func setupFileManager() {
@@ -91,6 +105,15 @@ final class PixelateViewModel: ObservableObject {
   
   func uploadImageFromAlbum(from selection: PhotosPickerItem?) {
     guard let selection else { return }
+    
+    let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+    
+    if status == .denied || status == .restricted {
+      showPhotoAccessAlert = true
+      isButtonsDisabled = true
+      return
+    }
+    
     isLoading = true
     
     Task { [weak self] in
@@ -149,10 +172,11 @@ final class PixelateViewModel: ObservableObject {
     isLoading = true
     
     Task {
-      let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
-      guard status == .authorized else {
+      let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+      if status == .denied || status == .restricted {
         await MainActor.run {
           self.isLoading = false
+          self.showPhotoAccessAlert = true
         }
         return
       }

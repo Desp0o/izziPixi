@@ -109,5 +109,15 @@ struct PixelateView: View {
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+    .alert("Photo Access Required", isPresented: $vm.showPhotoAccessAlert) {
+      Button("Open Settings") {
+        if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
+          UIApplication.shared.open(settingsURL)
+        }
+      }
+      Button("Cancel", role: .cancel) {}
+    } message: {
+      Text("This app requires access to your photo library to function. Please enable access in Settings.")
+    }
   }
 }
